@@ -312,38 +312,133 @@ export default function AdminPage() {
   const uniq = (arr) => [...new Set(arr)].sort();
 
   async function handleExportCSV() {
-    const res = await fetch(API_BASE.replace(/\/$/, "") + "/api/survey/export", { headers: { "X-Admin-Key": adminKey } });
-    if (!res.ok) { alert("تعذر التصدير"); return; }
-    const blob = await res.blob();
+    const headers = ["#", "التاريخ", "q1_سعر مناسب للجودة", "q2_السعر يمنعني", "q3_عادل مقابل المنافسين",
+      "q4_أميّزه بسهولة", "q5_أول ما يخطر", "q6_صورة مميزة", "q7_أعرف ما يميّزه", "q8_يناسب أشخاص مثلي",
+      "q9_تصاميم تناسبني", "q10_أوصي به", "الدخل الشهري", "الفئة العمرية", "الجنس", "انطباع عام", "ملاحظات"];
+    const rows = filteredList.map((r) => {
+      const date = r.created_at ? new Date(r.created_at).toLocaleString("ar-SA") : "";
+      const cells = [r.id, date, r.q1, r.q2, r.q3, r.q4, r.q5, r.q6, r.q7, r.q8, r.q9, r.q10,
+        r.income, r.age_group, r.gender, r.feedback_general || "", r.feedback_notes || ""];
+      return cells.map((c) => '"' + String(c == null ? "" : c).replace(/"/g, '""') + '"').join(",");
+    });
+    if (!rows.length) { alert("لا توجد ردود مطابقة للفلاتر الحالية"); return; }
+    const csv = "\uFEFF" + headers.join(",") + "\n" + rows.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "outfit_survey_export_" + new Date().toISOString().slice(0, 10) + ".csv";
     a.click();
   }
 
+  function activeFilterSummary() {
+    const parts = [];
+    parts.push(days ? `آخر ${days} يوم` : "كل الفترة");
+    if (incomeF) parts.push("الدخل: " + incomeF);
+    if (ageF) parts.push("العمر: " + ageF);
+    if (genderF) parts.push("الجنس: " + genderF);
+    if (search.trim()) parts.push('بحث: "' + search.trim() + '"');
+    return parts.join(" · ");
+  }
+
   async function handleExportPDF() {
-    if (!dashRef.current) return;
+    if (!stats) return;
     setPdfBusy(true);
+    const container = document.createElement("div");
+    container.style.position = "fixed";
+    container.style.left = "-99999px";
+    container.style.top = "0";
+    container.style.width = "794px";
+    container.style.direction = "rtl";
+    container.style.fontFamily = "'IBM Plex Sans Arabic', system-ui, sans-serif";
+    document.body.appendChild(container);
+
+    const genDate = new Date().toLocaleString("ar-SA");
+    const overallAvg = (() => {
+      const v = Object.values(stats.averages).filter((x) => x != null);
+      return v.length ? (v.reduce((a, b) => a + b, 0) / v.length).toFixed(1) : "-";
+    })();
+
+    const pageShell = (innerHtml) => `
+      <div style="width:794px;min-height:1123px;background:#fff;box-sizing:border-box;padding:48px 52px;color:#1C1E23">
+        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #F05322;padding-bottom:14px;margin-bottom:22px">
+          <div style="font-size:20px;font-weight:800">تقرير استبيان OUTFIT</div>
+          <div style="font-size:11px;color:#6E7278">تاريخ الإصدار: ${genDate}</div>
+        </div>
+        ${innerHtml}
+      </div>`;
+
+    const kpiBox = (label, value) => `
+      <div style="flex:1;background:#FDEEE8;border-radius:10px;padding:14px 16px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:#D8431A">${value}</div>
+        <div style="font-size:11.5px;color:#6E7278;margin-top:4px;font-weight:600">${label}</div>
+      </div>`;
+
+    const table = (title, rows) => `
+      <div style="margin-bottom:20px">
+        <div style="font-size:14px;font-weight:800;margin-bottom:8px">${title}</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          ${rows.map((r, i) => `
+            <tr style="background:${i === 0 ? "#F6F6F7" : "#fff"}">
+              ${r.map((c) => `<td style="padding:7px 10px;border:1px solid #E7E8EA;${i === 0 ? "font-weight:700;color:#6E7278" : ""}">${c}</td>`).join("")}
+            </tr>`).join("")}
+        </table>
+      </div>`;
+
+    const page1 = pageShell(`
+      <div style="font-size:11px;color:#898D93;margin-bottom:18px">الفلاتر المطبّقة: ${activeFilterSummary()}</div>
+      <div style="display:flex;gap:10px;margin-bottom:26px">
+        ${kpiBox("إجمالي الردود المطابقة", filteredList.length)}
+        ${kpiBox("المتوسط العام للرضا", overallAvg + " / 5")}
+        ${kpiBox("الاستعداد للتوصية", (stats.averages.q10 ?? "-") + " / 5")}
+      </div>
+      ${table("متوسط الإجابات لكل سؤال", [
+        ["السؤال", "المتوسط (من 5)"],
+        ...Object.entries(QUESTION_LABELS).map(([q, label]) => [label, stats.averages[q] ?? "-"]),
+      ])}
+      <div style="display:flex;gap:18px">
+        <div style="flex:1">${table("الدخل الشهري", [["الفئة", "العدد"], ...Object.entries(stats.income || {})])}</div>
+        <div style="flex:1">${table("الفئة العمرية", [["الفئة", "العدد"], ...Object.entries(stats.age_group || {})])}</div>
+        <div style="flex:1">${table("الجنس", [["الفئة", "العدد"], ...Object.entries(stats.gender || {})])}</div>
+      </div>
+    `);
+
+    const ROWS_PER_PAGE = 16;
+    const respChunks = [];
+    for (let i = 0; i < filteredList.length; i += ROWS_PER_PAGE) respChunks.push(filteredList.slice(i, i + ROWS_PER_PAGE));
+
+    const responsePages = respChunks.map((chunk, idx) => pageShell(`
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">
+        الردود التفصيلية ${respChunks.length > 1 ? `(صفحة ${idx + 1} من ${respChunks.length})` : ""}
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:10.5px">
+        <tr style="background:#F6F6F7">
+          ${["#", "التاريخ", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "الدخل", "العمر", "الجنس"]
+            .map((h) => `<td style="padding:6px 7px;border:1px solid #E7E8EA;font-weight:700;color:#6E7278">${h}</td>`).join("")}
+        </tr>
+        ${chunk.map((r) => {
+          const date = r.created_at ? new Date(r.created_at).toLocaleDateString("ar-SA") : "";
+          return `<tr>${[r.id, date, r.q1, r.q2, r.q3, r.q4, r.q5, r.q6, r.q7, r.q8, r.q9, r.q10, r.income, r.age_group, r.gender]
+            .map((c) => `<td style="padding:6px 7px;border:1px solid #E7E8EA">${c}</td>`).join("")}</tr>`;
+        }).join("")}
+      </table>
+    `));
+
     try {
-      const canvas = await html2canvas(dashRef.current, { scale: 2, backgroundColor: "#F5F5F6", useCORS: true });
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: [canvas.width, canvas.height] });
-      const pageWidth = canvas.width;
-      const pageHeight = canvas.width * 1.414;
-      let heightLeft = canvas.height;
-      let position = 0;
-      pdf.addImage(imgData, "PNG", 0, position, pageWidth, canvas.height);
-      heightLeft -= pageHeight;
-      while (heightLeft > 0) {
-        position -= pageHeight;
-        pdf.addPage([pageWidth, pageHeight]);
-        pdf.addImage(imgData, "PNG", 0, position, pageWidth, canvas.height);
-        heightLeft -= pageHeight;
+      const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: [794, 1123] });
+      const allPagesHtml = filteredList.length ? [page1, ...responsePages] : [page1];
+      for (let i = 0; i < allPagesHtml.length; i++) {
+        container.innerHTML = allPagesHtml[i];
+        const pageEl = container.firstElementChild;
+        const canvas = await html2canvas(pageEl, { scale: 2, backgroundColor: "#fff", useCORS: true, windowWidth: 794 });
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+        if (i > 0) pdf.addPage([794, 1123]);
+        pdf.addImage(imgData, "JPEG", 0, 0, 794, 1123);
       }
       pdf.save("outfit_survey_report_" + new Date().toISOString().slice(0, 10) + ".pdf");
     } catch {
       alert("تعذر إنشاء ملف PDF");
     } finally {
+      document.body.removeChild(container);
       setPdfBusy(false);
     }
   }
@@ -397,6 +492,16 @@ export default function AdminPage() {
             </button>
             <button className="adm-btn adm-btn-ghost" onClick={handleLogout}><LogoutIcon /> خروج</button>
           </div>
+        </div>
+
+        <div className="adm-kpis">
+          {kpis.map((c, i) => (
+            <div className="adm-kpi" key={i} style={{ "--kpi-accent": c.accent }}>
+              <div className="adm-n">{c.n}</div>
+              <div className="adm-l">{c.l}</div>
+              {c.trend && <div className={"adm-trend " + c.trend.cls}>{c.trend.label}</div>}
+            </div>
+          ))}
         </div>
 
         <div className="adm-overview-card">
