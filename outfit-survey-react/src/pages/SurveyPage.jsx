@@ -95,14 +95,16 @@ function AdminPanel({ open, count, onClose, onExport, onClear }) {
   );
 }
 
+const EMPTY_ANSWERS = {
+  q1: null, q2: null, q3: null, q4: null, q5: null,
+  q6: null, q7: null, q8: null, q9: null, q10: null,
+  feedback_general: "", feedback_notes: "",
+  income: "", age: "", gender: "",
+};
+
 export default function SurveyPage() {
   const [page, setPage] = useState(1);
-  const [answers, setAnswers] = useState({
-    q1: null, q2: null, q3: null, q4: null, q5: null,
-    q6: null, q7: null, q8: null, q9: null, q10: null,
-    feedback_general: "", feedback_notes: "",
-    income: "", age: "", gender: "",
-  });
+  const [answers, setAnswers] = useState(EMPTY_ANSWERS);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -324,7 +326,13 @@ export default function SurveyPage() {
           </div>
 
           <div className="actions">
-            <button className="btn btn-ghost" onClick={() => { localStorage.removeItem(SUBMITTED_FLAG_KEY); setDone(false); setPage(1); }}>
+            <button className="btn btn-ghost" onClick={() => {
+              localStorage.removeItem(SUBMITTED_FLAG_KEY);
+              setAnswers(EMPTY_ANSWERS);
+              setErrors({});
+              setDone(false);
+              setPage(1);
+            }}>
               تعبئة استبيان جديد
             </button>
           </div>
