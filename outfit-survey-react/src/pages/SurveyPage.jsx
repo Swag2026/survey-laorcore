@@ -246,9 +246,19 @@ export default function SurveyPage() {
     <div className="survey-page">
       <div className="wrap">
         <div className="hero">
-          <div className="wordmark">OUTFIT<span>.</span></div>
-          <h1>رأيك يهمنا</h1>
-          <p>استبيان قصير من ٣ خطوات — أقل من دقيقتين — واحصل على كوبون خصم عند الانتهاء.</p>
+          <div className="brand-banner">
+            <img src="/logo.png" alt="OUTFIT أوت فيت" />
+          </div>
+          <span className="eyebrow">استبيان رأي العملاء</span>
+          <h1>شاركنا رأيك</h1>
+          <p>دقيقتان من وقتك تساعدنا نطوّر أسعارنا وتشكيلتنا لتناسبك أكثر.</p>
+          <div className="scale-bar">
+            <span className="s-item"><span className="s-badge">١</span> لا أوافق جداً</span>
+            <span className="s-sep" />
+            <span className="s-item"><span className="s-badge">٣</span> محايد</span>
+            <span className="s-sep" />
+            <span className="s-item"><span className="s-badge">٥</span> موافق جداً</span>
+          </div>
         </div>
 
         {page === 1 && (

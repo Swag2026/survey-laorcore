@@ -31,13 +31,35 @@ body{
    SURVEY (route: /)
    ========================================================= */
 .survey-page{padding-bottom:60px}
-.survey-page .wrap{max-width:640px;margin:0 auto;padding:0 18px}
+.survey-page .wrap{max-width:720px;margin:0 auto;padding:0 20px}
 
-.survey-page .hero{padding:34px 0 18px;text-align:center}
-.survey-page .hero .wordmark{font-family:'IBM Plex Sans Arabic',sans-serif;font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--dark);margin-bottom:10px}
-.survey-page .hero .wordmark span{color:var(--brand)}
-.survey-page .hero h1{font-size:20px;font-weight:700;margin-bottom:8px}
-.survey-page .hero p{color:var(--muted);font-size:14px;max-width:440px;margin:0 auto}
+.survey-page .brand-banner{background:transparent;padding:6px 0 0;margin-bottom:14px;cursor:default;user-select:none}
+.survey-page .brand-banner img{width:min(340px,82%);height:auto;display:block;margin:0 auto}
+
+.survey-page .scale-bar{
+  display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 12px;
+  margin:18px auto 0;background:var(--brand-tint);border:1px solid rgba(240,83,34,.20);
+  border-radius:11px;padding:8px 14px;box-shadow:0 4px 12px rgba(240,83,34,.09);
+}
+.survey-page .scale-bar .s-item{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink)}
+.survey-page .scale-bar .s-badge{
+  width:20px;height:20px;border-radius:50%;background:var(--brand);color:#fff;flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-family:'IBM Plex Sans Arabic',sans-serif;font-weight:700;font-size:11px;
+}
+.survey-page .scale-bar .s-sep{width:1px;height:13px;background:rgba(240,83,34,.28)}
+@media (max-width:480px){ .survey-page .scale-bar .s-sep{display:none} }
+
+.survey-page .hero{text-align:center;padding:44px 0 28px}
+.survey-page .hero .eyebrow{
+  display:inline-block;font-size:12px;letter-spacing:.28em;font-weight:700;
+  color:var(--brand);padding-inline-start:.28em;margin-bottom:14px;
+}
+.survey-page .hero h1{
+  font-family:'IBM Plex Sans Arabic',sans-serif;font-weight:800;
+  font-size:clamp(28px,7vw,42px);line-height:1.25;color:var(--ink);margin-bottom:12px;
+}
+.survey-page .hero p{color:var(--muted);max-width:460px;margin:0 auto;font-size:16px}
 
 .survey-page .page{display:none}
 .survey-page .page.active{display:block;animation:cardPop .4s ease both}
