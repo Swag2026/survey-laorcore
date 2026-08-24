@@ -362,6 +362,9 @@ export default function SurveyPage() {
 
   return (
     <div className="survey-page">
+      <div className="progress-track">
+        <div className="progress-fill" style={{ width: (page / 3) * 100 + "%" }} />
+      </div>
       <div className="wrap">
         <div className="hero">
           <div className="brand-banner" onClick={bumpLogo}>
