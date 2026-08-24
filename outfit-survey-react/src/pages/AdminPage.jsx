@@ -143,7 +143,14 @@ export default function AdminPage() {
             fill: true, tension: 0.35, pointRadius: 3, pointBackgroundColor: "#F05322",
           }],
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { precision: 0, color: "#a1a1aa" }, grid: { color: "#27272a" } },
+            x: { ticks: { color: "#a1a1aa" }, grid: { color: "#27272a" } },
+          },
+        },
       });
     }
 
@@ -153,7 +160,7 @@ export default function AdminPage() {
       const pct = Math.max(0, Math.min(100, (recommendAvg / 5) * 100));
       chartsRef.current.nps = new Chart(npsRef.current, {
         type: "doughnut",
-        data: { labels: ["النتيجة", "الباقي"], datasets: [{ data: [pct, 100 - pct], backgroundColor: [scoreColor(recommendAvg), "#F0F0F1"], borderWidth: 0 }] },
+        data: { labels: ["النتيجة", "الباقي"], datasets: [{ data: [pct, 100 - pct], backgroundColor: [scoreColor(recommendAvg), "#27272a"], borderWidth: 0 }] },
         options: { responsive: true, maintainAspectRatio: false, cutout: "75%", circumference: 180, rotation: 270, plugins: { legend: { display: false }, tooltip: { enabled: false } } },
         plugins: [{
           id: "centerText",
@@ -161,7 +168,7 @@ export default function AdminPage() {
             const { ctx, chartArea: { width, height, top } } = chart;
             ctx.save();
             ctx.font = "800 26px 'IBM Plex Sans Arabic'";
-            ctx.fillStyle = "#1C1E23";
+            ctx.fillStyle = "#fafafa";
             ctx.textAlign = "center";
             ctx.fillText(recommendAvg.toFixed(1), width / 2, top + height * 0.72);
             ctx.restore();
@@ -186,7 +193,16 @@ export default function AdminPage() {
             backgroundColor: "rgba(240,83,34,0.18)", borderColor: "#F05322", pointBackgroundColor: "#F05322",
           }],
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { r: { min: 0, max: 5, ticks: { stepSize: 1 } } } },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            r: {
+              min: 0, max: 5, ticks: { stepSize: 1, color: "#a1a1aa", backdropColor: "transparent" },
+              grid: { color: "#27272a" }, angleLines: { color: "#27272a" }, pointLabels: { color: "#a1a1aa" },
+            },
+          },
+        },
       });
     }
 
@@ -196,8 +212,8 @@ export default function AdminPage() {
       const entries = Object.entries(data || {});
       chartsRef.current[key] = new Chart(ref.current, {
         type: "doughnut",
-        data: { labels: entries.map((e) => e[0]), datasets: [{ data: entries.map((e) => e[1]), backgroundColor: CHART_COLORS, borderWidth: 2, borderColor: "#fff" }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } } } },
+        data: { labels: entries.map((e) => e[0]), datasets: [{ data: entries.map((e) => e[1]), backgroundColor: CHART_COLORS, borderWidth: 2, borderColor: "#18181b" }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 }, color: "#a1a1aa" } } } },
       });
     };
     pie("income", incomeRef, stats.income);
