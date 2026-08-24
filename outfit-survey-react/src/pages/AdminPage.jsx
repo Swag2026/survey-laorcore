@@ -104,6 +104,8 @@ export default function AdminPage() {
   const [qrBranchName, setQrBranchName] = useState("");
   const [qrLink, setQrLink] = useState("");
   const [qrError, setQrError] = useState("");
+  const [registeredBranches, setRegisteredBranches] = useState([]);
+  const [branchesBusy, setBranchesBusy] = useState(false);
   const chartsRef = useRef({});
   const dashRef = useRef(null);
 
@@ -141,10 +143,16 @@ export default function AdminPage() {
   useEffect(() => {
     const key = sessionStorage.getItem("outfit_admin_key");
     if (key) {
+      setAdminKey(key);
       loadAll(API_BASE, key, days).then(() => setLoggedIn(true)).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (loggedIn) loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loggedIn]);
 
   useEffect(() => {
     if (loggedIn) loadAll(API_BASE, adminKey, days).catch(() => {});
@@ -339,17 +347,54 @@ export default function AdminPage() {
   const feedbackRows = useMemo(() => list.filter((r) => r.feedback_general || r.feedback_notes), [list]);
   const uniq = (arr) => [...new Set(arr)].sort();
 
+  async function loadBranches() {
+    try {
+      const res = await fetch(API_BASE.replace(/\/$/, "") + "/api/branches", { headers: { "X-Admin-Key": adminKey } });
+      if (res.ok) setRegisteredBranches(await res.json());
+    } catch { /* noop */ }
+  }
+
   async function handleGenerateQr() {
     setQrError("");
     const name = qrBranchName.trim();
     if (!name) { setQrError("اكتب اسم الفرع أولاً"); return; }
-    const link = window.location.origin + "/?branch=" + encodeURIComponent(name);
-    setQrLink(link);
+    setBranchesBusy(true);
     try {
+      const res = await fetch(API_BASE.replace(/\/$/, "") + "/api/branches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Admin-Key": adminKey },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok && res.status !== 409) throw new Error("register failed");
+      await loadBranches();
+
+      const link = window.location.origin + "/?branch=" + encodeURIComponent(name);
+      setQrLink(link);
       await QRCode.toCanvas(qrCanvasRef.current, link, { width: 260, margin: 2, color: { dark: "#1C1E23", light: "#FFFFFF" } });
     } catch {
-      setQrError("تعذر إنشاء رمز QR");
+      setQrError("تعذر تسجيل الفرع أو إنشاء رمز QR");
+    } finally {
+      setBranchesBusy(false);
     }
+  }
+
+  async function handleDeleteBranch(id) {
+    if (!confirm("حذف هذا الفرع من القائمة المعتمدة؟ الروابط القديمة له ستُسجَّل تحت 'غير معروف' بعدها.")) return;
+    try {
+      await fetch(API_BASE.replace(/\/$/, "") + "/api/branches/" + id, {
+        method: "DELETE",
+        headers: { "X-Admin-Key": adminKey },
+      });
+      await loadBranches();
+    } catch { /* noop */ }
+  }
+
+  function handleQuickGenerate(name) {
+    setQrBranchName(name);
+    const link = window.location.origin + "/?branch=" + encodeURIComponent(name);
+    setQrLink(link);
+    setQrError("");
+    QRCode.toCanvas(qrCanvasRef.current, link, { width: 260, margin: 2, color: { dark: "#1C1E23", light: "#FFFFFF" } }).catch(() => setQrError("تعذر إنشاء رمز QR"));
   }
 
   function handleDownloadQr() {
@@ -625,7 +670,9 @@ export default function AdminPage() {
 
         <div className="adm-section" style={{ marginTop: 16 }}>
           <h2>إنشاء رابط وQR لفرع جديد</h2>
-          <div className="adm-hint">اكتب اسم الفرع، وحمّل الـ QR — أي عميل يمسحه يُسجَّل رده تلقائياً تحت هذا الفرع</div>
+          <div className="adm-hint">
+            اكتب اسم الفرع — يُسجَّل تلقائياً في القائمة المعتمدة، وأي رابط لاسم غير مسجَّل يُصنَّف "غير معروف" حماية من التلاعب
+          </div>
           <div className="adm-qr-row">
             <input
               type="text"
@@ -634,19 +681,34 @@ export default function AdminPage() {
               onChange={(e) => setQrBranchName(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleGenerateQr(); }}
             />
-            <button className="adm-btn adm-btn-primary" style={{ width: "auto" }} onClick={handleGenerateQr}>إنشاء</button>
+            <button className="adm-btn adm-btn-primary" style={{ width: "auto" }} onClick={handleGenerateQr} disabled={branchesBusy}>
+              {branchesBusy ? "جارٍ..." : "إنشاء"}
+            </button>
           </div>
           {qrError && <div className="adm-err" style={{ marginTop: 10 }}>{qrError}</div>}
-          {qrLink && (
-            <div className="adm-qr-result">
-              <canvas ref={qrCanvasRef} />
-              <div className="adm-qr-info">
-                <div className="adm-qr-link">{qrLink}</div>
-                <div className="adm-qr-actions">
-                  <button className="adm-btn adm-btn-ghost" onClick={handleCopyQrLink}>نسخ الرابط</button>
-                  <button className="adm-btn adm-btn-ghost" onClick={handleDownloadQr}>تحميل QR (PNG)</button>
-                </div>
+          <div className="adm-qr-result" style={{ display: qrLink ? "flex" : "none" }}>
+            <canvas ref={qrCanvasRef} />
+            <div className="adm-qr-info">
+              <div className="adm-qr-link">{qrLink}</div>
+              <div className="adm-qr-actions">
+                <button className="adm-btn adm-btn-ghost" onClick={handleCopyQrLink}>نسخ الرابط</button>
+                <button className="adm-btn adm-btn-ghost" onClick={handleDownloadQr}>تحميل QR (PNG)</button>
               </div>
+            </div>
+          </div>
+
+          {registeredBranches.length > 0 && (
+            <div className="adm-branch-list">
+              <div className="adm-hint" style={{ marginBottom: 8 }}>الفروع المعتمدة حالياً:</div>
+              {registeredBranches.map((b) => (
+                <div className="adm-branch-row" key={b.id}>
+                  <span className="adm-branch-name">{b.name}</span>
+                  <div className="adm-branch-row-actions">
+                    <button className="adm-btn adm-btn-ghost" onClick={() => handleQuickGenerate(b.name)}>QR</button>
+                    <button className="adm-btn adm-btn-ghost" onClick={() => handleDeleteBranch(b.id)}>حذف</button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
