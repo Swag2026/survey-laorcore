@@ -232,8 +232,8 @@ img{-webkit-touch-callout:none}
    ADMIN DASHBOARD (route: /admin) — all classes prefixed "adm-"
    ========================================================= */
 .admin-page{
-  --adm-bg:#09090b; --adm-card:#18181b; --adm-card-2:#1f1f23; --adm-border:#27272a;
-  --adm-border-soft:#3f3f46; --adm-text:#fafafa; --adm-muted:#a1a1aa; --adm-muted-2:#71717a;
+  --adm-bg:#F6F6F7; --adm-card:#FFFFFF; --adm-card-2:#FAFAFA; --adm-border:#E7E8EA;
+  --adm-border-soft:#D9DADD; --adm-text:#1C1E23; --adm-muted:#6E7278; --adm-muted-2:#9A9DA3;
   padding:22px 16px 60px;background:var(--adm-bg);color:var(--adm-text);min-height:100vh;
 }
 .admin-page .adm-wrap{max-width:1140px;margin:0 auto}
@@ -246,7 +246,7 @@ img{-webkit-touch-callout:none}
 .admin-page .adm-login-card label{display:block;font-size:13px;color:var(--adm-muted);margin-bottom:6px;font-weight:600}
 .admin-page .adm-login-card input{width:100%;padding:11px 13px;border:1.5px solid var(--adm-border-soft);border-radius:10px;font-size:15px;margin-bottom:14px;font-family:inherit;background:var(--adm-card-2);color:var(--adm-text)}
 .admin-page .adm-login-card input:focus{outline:none;border-color:var(--brand)}
-.admin-page .adm-err{color:#F87171;font-size:13px;margin-top:-6px;margin-bottom:12px}
+.admin-page .adm-err{color:#C0472B;font-size:13px;margin-top:-6px;margin-bottom:12px}
 
 .admin-page .adm-btn{
   font-weight:600;border:1px solid transparent;cursor:pointer;border-radius:10px;
@@ -277,7 +277,7 @@ img{-webkit-touch-callout:none}
 .admin-page .adm-btn:disabled{opacity:.5;cursor:default;box-shadow:none}
 .admin-page .adm-btn:focus-visible{outline:2px solid var(--brand-2);outline-offset:2px}
 
-.admin-page .adm-logo{height:44px;width:auto;display:block;filter:brightness(0) invert(1)}
+.admin-page .adm-logo{height:44px;width:auto;display:block}
 .admin-page .adm-login-card .adm-logo{height:56px;margin:0 auto 16px}
 .admin-page .adm-brand{display:flex;align-items:center;gap:14px}
 
@@ -288,13 +288,31 @@ img{-webkit-touch-callout:none}
 .admin-page .adm-select{border:1.5px solid var(--adm-border-soft);border-radius:9px;padding:8px 11px;font-size:13px;font-family:inherit;background:var(--adm-card-2);color:var(--adm-text)}
 
 .admin-page .adm-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+
+.admin-page .adm-overview-card{
+  background:var(--adm-card);border:1px solid var(--adm-border);border-radius:16px;
+  padding:22px 24px;margin-bottom:20px;
+}
+.admin-page .adm-overview-head{font-size:16px;font-weight:800;color:var(--adm-text);margin-bottom:18px}
+.admin-page .adm-overview-body{display:flex;align-items:center;gap:28px;flex-wrap:wrap}
+.admin-page .adm-overview-chart{position:relative;width:180px;height:180px;flex-shrink:0;margin:0 auto}
+.admin-page .adm-overview-divider{width:1px;align-self:stretch;background:var(--adm-border);min-height:120px}
+.admin-page .adm-overview-stats{flex:1;display:grid;grid-template-columns:repeat(2,1fr);gap:16px 24px;min-width:220px}
+.admin-page .adm-overview-stat{display:flex;flex-direction:column;gap:4px}
+.admin-page .adm-overview-stat-label{font-size:12.5px;color:var(--adm-muted);font-weight:600}
+.admin-page .adm-overview-stat-value{font-size:20px;font-weight:800;color:var(--adm-text)}
+@media (max-width:640px){
+  .admin-page .adm-overview-body{justify-content:center}
+  .admin-page .adm-overview-divider{display:none}
+  .admin-page .adm-overview-stats{grid-template-columns:1fr 1fr;width:100%}
+}
 .admin-page .adm-kpi{background:var(--adm-card);border:1px solid var(--adm-border);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden}
 .admin-page .adm-kpi::before{content:"";position:absolute;inset-inline-start:0;top:0;bottom:0;width:4px;background:var(--kpi-accent,var(--brand))}
 .admin-page .adm-kpi .adm-n{font-size:26px;font-weight:800;color:var(--adm-text)}
 .admin-page .adm-kpi .adm-l{font-size:12.5px;color:var(--adm-muted);margin-top:4px;font-weight:600}
 .admin-page .adm-trend{font-size:11.5px;margin-top:6px;font-weight:700}
-.admin-page .adm-trend.up{color:#4ADE80}
-.admin-page .adm-trend.down{color:#F87171}
+.admin-page .adm-trend.up{color:#1D8A4C}
+.admin-page .adm-trend.down{color:#C0472B}
 .admin-page .adm-trend.flat{color:var(--adm-muted)}
 
 .admin-page .adm-grid-2{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:16px}

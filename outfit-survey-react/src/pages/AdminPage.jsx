@@ -66,8 +66,8 @@ export default function AdminPage() {
   useEffect(() => {
     const prevBg = document.body.style.backgroundColor;
     const prevHtmlBg = document.documentElement.style.backgroundColor;
-    document.body.style.backgroundColor = "#09090b";
-    document.documentElement.style.backgroundColor = "#09090b";
+    document.body.style.backgroundColor = "#F6F6F7";
+    document.documentElement.style.backgroundColor = "#F6F6F7";
     return () => {
       document.body.style.backgroundColor = prevBg;
       document.documentElement.style.backgroundColor = prevHtmlBg;
@@ -91,6 +91,7 @@ export default function AdminPage() {
   const [pdfBusy, setPdfBusy] = useState(false);
 
   const trendRef = useRef(null);
+  const overviewRef = useRef(null);
   const npsRef = useRef(null);
   const radarRef = useRef(null);
   const incomeRef = useRef(null);
@@ -150,6 +151,34 @@ export default function AdminPage() {
   useEffect(() => {
     if (!stats || !loggedIn) return;
 
+    destroy("overview");
+    if (overviewRef.current) {
+      const entries = Object.entries(stats.income || {});
+      chartsRef.current.overview = new Chart(overviewRef.current, {
+        type: "doughnut",
+        data: {
+          labels: entries.map((e) => e[0]),
+          datasets: [{ data: entries.map((e) => e[1]), backgroundColor: CHART_COLORS, borderWidth: 3, borderColor: "#fff" }],
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: "72%", plugins: { legend: { display: false }, tooltip: { enabled: true } } },
+        plugins: [{
+          id: "overviewCenterText",
+          afterDraw(chart) {
+            const { ctx, chartArea: { width, height, top, left } } = chart;
+            ctx.save();
+            ctx.textAlign = "center";
+            ctx.fillStyle = "#898D93";
+            ctx.font = "600 12px 'IBM Plex Sans Arabic'";
+            ctx.fillText("إجمالي الردود", left + width / 2, top + height / 2 - 12);
+            ctx.fillStyle = "#1C1E23";
+            ctx.font = "800 30px 'IBM Plex Sans Arabic'";
+            ctx.fillText(String(stats.total), left + width / 2, top + height / 2 + 16);
+            ctx.restore();
+          },
+        }],
+      });
+    }
+
     destroy("trend");
     if (trendRef.current) {
       chartsRef.current.trend = new Chart(trendRef.current, {
@@ -166,8 +195,8 @@ export default function AdminPage() {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            y: { beginAtZero: true, ticks: { precision: 0, color: "#a1a1aa" }, grid: { color: "#27272a" } },
-            x: { ticks: { color: "#a1a1aa" }, grid: { color: "#27272a" } },
+            y: { beginAtZero: true, ticks: { precision: 0, color: "#898D93" }, grid: { color: "#E7E8EA" } },
+            x: { ticks: { color: "#898D93" }, grid: { color: "#E7E8EA" } },
           },
         },
       });
@@ -179,7 +208,7 @@ export default function AdminPage() {
       const pct = Math.max(0, Math.min(100, (recommendAvg / 5) * 100));
       chartsRef.current.nps = new Chart(npsRef.current, {
         type: "doughnut",
-        data: { labels: ["النتيجة", "الباقي"], datasets: [{ data: [pct, 100 - pct], backgroundColor: [scoreColor(recommendAvg), "#27272a"], borderWidth: 0 }] },
+        data: { labels: ["النتيجة", "الباقي"], datasets: [{ data: [pct, 100 - pct], backgroundColor: [scoreColor(recommendAvg), "#E7E8EA"], borderWidth: 0 }] },
         options: { responsive: true, maintainAspectRatio: false, cutout: "75%", circumference: 180, rotation: 270, plugins: { legend: { display: false }, tooltip: { enabled: false } } },
         plugins: [{
           id: "centerText",
@@ -187,7 +216,7 @@ export default function AdminPage() {
             const { ctx, chartArea: { width, height, top } } = chart;
             ctx.save();
             ctx.font = "800 26px 'IBM Plex Sans Arabic'";
-            ctx.fillStyle = "#fafafa";
+            ctx.fillStyle = "#1C1E23";
             ctx.textAlign = "center";
             ctx.fillText(recommendAvg.toFixed(1), width / 2, top + height * 0.72);
             ctx.restore();
@@ -217,8 +246,8 @@ export default function AdminPage() {
           plugins: { legend: { display: false } },
           scales: {
             r: {
-              min: 0, max: 5, ticks: { stepSize: 1, color: "#a1a1aa", backdropColor: "transparent" },
-              grid: { color: "#27272a" }, angleLines: { color: "#27272a" }, pointLabels: { color: "#a1a1aa" },
+              min: 0, max: 5, ticks: { stepSize: 1, color: "#898D93", backdropColor: "transparent" },
+              grid: { color: "#E7E8EA" }, angleLines: { color: "#E7E8EA" }, pointLabels: { color: "#898D93" },
             },
           },
         },
@@ -231,8 +260,8 @@ export default function AdminPage() {
       const entries = Object.entries(data || {});
       chartsRef.current[key] = new Chart(ref.current, {
         type: "doughnut",
-        data: { labels: entries.map((e) => e[0]), datasets: [{ data: entries.map((e) => e[1]), backgroundColor: CHART_COLORS, borderWidth: 2, borderColor: "#18181b" }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 }, color: "#a1a1aa" } } } },
+        data: { labels: entries.map((e) => e[0]), datasets: [{ data: entries.map((e) => e[1]), backgroundColor: CHART_COLORS, borderWidth: 2, borderColor: "#fff" }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 }, color: "#898D93" } } } },
       });
     };
     pie("income", incomeRef, stats.income);
@@ -370,14 +399,20 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="adm-kpis">
-          {kpis.map((c, i) => (
-            <div className="adm-kpi" key={i} style={{ "--kpi-accent": c.accent }}>
-              <div className="adm-n">{c.n}</div>
-              <div className="adm-l">{c.l}</div>
-              {c.trend && <div className={"adm-trend " + c.trend.cls}>{c.trend.label}</div>}
+        <div className="adm-overview-card">
+          <div className="adm-overview-head">نظرة عامة على الردود</div>
+          <div className="adm-overview-body">
+            <div className="adm-overview-chart"><canvas ref={overviewRef} /></div>
+            <div className="adm-overview-divider" />
+            <div className="adm-overview-stats">
+              {kpis.slice(1).map((c, i) => (
+                <div className="adm-overview-stat" key={i}>
+                  <span className="adm-overview-stat-label">{c.l}</span>
+                  <span className="adm-overview-stat-value">{c.n}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
 
         <div className="adm-grid-2">
