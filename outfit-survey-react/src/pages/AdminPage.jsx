@@ -19,6 +19,41 @@ function scoreColor(v) {
   return "#C0472B";
 }
 
+const iconProps = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" };
+
+function RefreshIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+      <path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+    </svg>
+  );
+}
+function CsvIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" />
+      <path d="M8 13h8" /><path d="M8 17h5" />
+    </svg>
+  );
+}
+function PdfIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" />
+      <path d="M9 15v-3h1.5a1.5 1.5 0 0 1 0 3H9z" />
+    </svg>
+  );
+}
+function LogoutIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <path d="M16 17l5-5-5-5" /><path d="M21 12H9" />
+    </svg>
+  );
+}
+
 export default function AdminPage() {
   const [adminKey, setAdminKey] = useState(sessionStorage.getItem("outfit_admin_key") || "");
   const [loggedIn, setLoggedIn] = useState(false);
@@ -254,7 +289,8 @@ export default function AdminPage() {
       <div className="admin-page" dir="rtl">
         <div className="adm-wrap">
           <div className="adm-login-card">
-            <h1>تقرير استبيان OUTFIT</h1>
+            <img src="/logo.png" alt="OUTFIT" className="adm-logo" />
+            <h1>تقرير استبيان</h1>
             <label>كلمة المرور</label>
             <input
               type="password"
@@ -277,9 +313,12 @@ export default function AdminPage() {
     <div className="admin-page" dir="rtl">
       <div className="adm-wrap" ref={dashRef}>
         <div className="adm-topbar">
-          <div>
-            <h1>تقرير استبيان OUTFIT</h1>
-            <div className="adm-sub">آخر تحديث: {updatedAt}</div>
+          <div className="adm-brand">
+            <img src="/logo.png" alt="OUTFIT" className="adm-logo" />
+            <div>
+              <h1>تقرير استبيان</h1>
+              <div className="adm-sub">آخر تحديث: {updatedAt}</div>
+            </div>
           </div>
           <div className="adm-actions">
             <select className="adm-select" value={days} onChange={(e) => setDays(parseInt(e.target.value, 10))}>
@@ -287,12 +326,12 @@ export default function AdminPage() {
               <option value={30}>آخر 30 يوم</option>
               <option value={0}>كل الفترة</option>
             </select>
-            <button className="adm-btn adm-btn-ghost" onClick={() => loadAll()}>↻ تحديث</button>
-            <button className="adm-btn adm-btn-ghost" onClick={handleExportCSV}>⬇ تصدير CSV</button>
+            <button className="adm-btn adm-btn-ghost" onClick={() => loadAll()}><RefreshIcon /> تحديث</button>
+            <button className="adm-btn adm-btn-ghost" onClick={handleExportCSV}><CsvIcon /> تصدير CSV</button>
             <button className="adm-btn adm-btn-ghost" onClick={handleExportPDF} disabled={pdfBusy}>
-              {pdfBusy ? "جارٍ التجهيز…" : "📄 تحميل PDF"}
+              <PdfIcon /> {pdfBusy ? "جارٍ التجهيز…" : "تحميل PDF"}
             </button>
-            <button className="adm-btn adm-btn-ghost" onClick={handleLogout}>خروج</button>
+            <button className="adm-btn adm-btn-ghost" onClick={handleLogout}><LogoutIcon /> خروج</button>
           </div>
         </div>
 
