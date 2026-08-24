@@ -27,6 +27,17 @@ const genderOpts = ["ذكر", "أنثى", "أفضّل عدم الإجابة"];
 const arNum = (n) => "٠١٢٣٤٥٦٧٨٩"[n];
 const SUBMITTED_FLAG_KEY = "outfit_survey_submitted";
 const DEVICE_TOKEN_KEY = "outfit_survey_device_token";
+const BRANCH_KEY = "outfit_survey_branch";
+
+function getBranch() {
+  const fromUrl = new URLSearchParams(window.location.search).get("branch");
+  if (fromUrl && fromUrl.trim()) {
+    const clean = fromUrl.trim().slice(0, 64);
+    localStorage.setItem(BRANCH_KEY, clean);
+    return clean;
+  }
+  return localStorage.getItem(BRANCH_KEY) || "unknown";
+}
 
 function getDeviceToken() {
   let token = localStorage.getItem(DEVICE_TOKEN_KEY);
@@ -191,6 +202,7 @@ export default function SurveyPage() {
 
     const payload = {
       device_token: getDeviceToken(),
+      branch: getBranch(),
       q1: answers.q1, q2: answers.q2, q3: answers.q3, q4: answers.q4, q5: answers.q5,
       q6: answers.q6, q7: answers.q7, q8: answers.q8, q9: answers.q9, q10: answers.q10,
       feedback_general: answers.feedback_general.trim(),

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Chart from "chart.js/auto";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import QRCode from "qrcode";
 import { API_BASE } from "../lib/config.js";
 
 const QUESTION_LABELS = {
@@ -88,6 +89,7 @@ export default function AdminPage() {
   const [incomeF, setIncomeF] = useState("");
   const [ageF, setAgeF] = useState("");
   const [genderF, setGenderF] = useState("");
+  const [branchF, setBranchF] = useState("");
   const [pdfBusy, setPdfBusy] = useState(false);
 
   const trendRef = useRef(null);
@@ -97,6 +99,11 @@ export default function AdminPage() {
   const incomeRef = useRef(null);
   const ageRef = useRef(null);
   const genderRef = useRef(null);
+  const branchRef = useRef(null);
+  const qrCanvasRef = useRef(null);
+  const [qrBranchName, setQrBranchName] = useState("");
+  const [qrLink, setQrLink] = useState("");
+  const [qrError, setQrError] = useState("");
   const chartsRef = useRef({});
   const dashRef = useRef(null);
 
@@ -268,6 +275,26 @@ export default function AdminPage() {
     pie("age", ageRef, stats.age_group);
     pie("gender", genderRef, stats.gender);
 
+    destroy("branch");
+    if (branchRef.current) {
+      const entries = Object.entries(stats.branch || {}).sort((a, b) => b[1] - a[1]);
+      chartsRef.current.branch = new Chart(branchRef.current, {
+        type: "bar",
+        data: {
+          labels: entries.map((e) => e[0]),
+          datasets: [{ data: entries.map((e) => e[1]), backgroundColor: "#F05322", borderRadius: 6, maxBarThickness: 40 }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { precision: 0, color: "#898D93" }, grid: { color: "#E7E8EA" } },
+            x: { ticks: { color: "#898D93" }, grid: { display: false } },
+          },
+        },
+      });
+    }
+
     return () => { Object.keys(chartsRef.current).forEach(destroy); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stats, loggedIn]);
@@ -300,25 +327,51 @@ export default function AdminPage() {
       if (incomeF && r.income !== incomeF) return false;
       if (ageF && r.age_group !== ageF) return false;
       if (genderF && r.gender !== genderF) return false;
+      if (branchF && r.branch !== branchF) return false;
       if (s) {
         const text = ((r.feedback_general || "") + " " + (r.feedback_notes || "")).toLowerCase();
         if (!text.includes(s)) return false;
       }
       return true;
     });
-  }, [list, search, incomeF, ageF, genderF]);
+  }, [list, search, incomeF, ageF, genderF, branchF]);
 
   const feedbackRows = useMemo(() => list.filter((r) => r.feedback_general || r.feedback_notes), [list]);
   const uniq = (arr) => [...new Set(arr)].sort();
 
+  async function handleGenerateQr() {
+    setQrError("");
+    const name = qrBranchName.trim();
+    if (!name) { setQrError("اكتب اسم الفرع أولاً"); return; }
+    const link = window.location.origin + "/?branch=" + encodeURIComponent(name);
+    setQrLink(link);
+    try {
+      await QRCode.toCanvas(qrCanvasRef.current, link, { width: 260, margin: 2, color: { dark: "#1C1E23", light: "#FFFFFF" } });
+    } catch {
+      setQrError("تعذر إنشاء رمز QR");
+    }
+  }
+
+  function handleDownloadQr() {
+    if (!qrCanvasRef.current) return;
+    const a = document.createElement("a");
+    a.href = qrCanvasRef.current.toDataURL("image/png");
+    a.download = "outfit-survey-qr-" + (qrBranchName.trim() || "branch") + ".png";
+    a.click();
+  }
+
+  function handleCopyQrLink() {
+    navigator.clipboard?.writeText(qrLink).catch(() => {});
+  }
+
   async function handleExportCSV() {
     const headers = ["#", "التاريخ", "q1_سعر مناسب للجودة", "q2_السعر يمنعني", "q3_عادل مقابل المنافسين",
       "q4_أميّزه بسهولة", "q5_أول ما يخطر", "q6_صورة مميزة", "q7_أعرف ما يميّزه", "q8_يناسب أشخاص مثلي",
-      "q9_تصاميم تناسبني", "q10_أوصي به", "الدخل الشهري", "الفئة العمرية", "الجنس", "انطباع عام", "ملاحظات"];
+      "q9_تصاميم تناسبني", "q10_أوصي به", "الدخل الشهري", "الفئة العمرية", "الجنس", "الفرع", "انطباع عام", "ملاحظات"];
     const rows = filteredList.map((r) => {
       const date = r.created_at ? new Date(r.created_at).toLocaleString("ar-SA") : "";
       const cells = [r.id, date, r.q1, r.q2, r.q3, r.q4, r.q5, r.q6, r.q7, r.q8, r.q9, r.q10,
-        r.income, r.age_group, r.gender, r.feedback_general || "", r.feedback_notes || ""];
+        r.income, r.age_group, r.gender, r.branch, r.feedback_general || "", r.feedback_notes || ""];
       return cells.map((c) => '"' + String(c == null ? "" : c).replace(/"/g, '""') + '"').join(",");
     });
     if (!rows.length) { alert("لا توجد ردود مطابقة للفلاتر الحالية"); return; }
@@ -336,6 +389,7 @@ export default function AdminPage() {
     if (incomeF) parts.push("الدخل: " + incomeF);
     if (ageF) parts.push("العمر: " + ageF);
     if (genderF) parts.push("الجنس: " + genderF);
+    if (branchF) parts.push("الفرع: " + branchF);
     if (search.trim()) parts.push('بحث: "' + search.trim() + '"');
     return parts.join(" · ");
   }
@@ -400,6 +454,7 @@ export default function AdminPage() {
         <div style="flex:1">${table("الفئة العمرية", [["الفئة", "العدد"], ...Object.entries(stats.age_group || {})])}</div>
         <div style="flex:1">${table("الجنس", [["الفئة", "العدد"], ...Object.entries(stats.gender || {})])}</div>
       </div>
+      ${table("الفروع", [["الفرع", "عدد الردود"], ...Object.entries(stats.branch || {})])}
     `);
 
     const ROWS_PER_PAGE = 16;
@@ -412,12 +467,12 @@ export default function AdminPage() {
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:10.5px">
         <tr style="background:#F6F6F7">
-          ${["#", "التاريخ", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "الدخل", "العمر", "الجنس"]
+          ${["#", "التاريخ", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "الدخل", "العمر", "الجنس", "الفرع"]
             .map((h) => `<td style="padding:6px 7px;border:1px solid #E7E8EA;font-weight:700;color:#6E7278">${h}</td>`).join("")}
         </tr>
         ${chunk.map((r) => {
           const date = r.created_at ? new Date(r.created_at).toLocaleDateString("ar-SA") : "";
-          return `<tr>${[r.id, date, r.q1, r.q2, r.q3, r.q4, r.q5, r.q6, r.q7, r.q8, r.q9, r.q10, r.income, r.age_group, r.gender]
+          return `<tr>${[r.id, date, r.q1, r.q2, r.q3, r.q4, r.q5, r.q6, r.q7, r.q8, r.q9, r.q10, r.income, r.age_group, r.gender, r.branch]
             .map((c) => `<td style="padding:6px 7px;border:1px solid #E7E8EA">${c}</td>`).join("")}</tr>`;
         }).join("")}
       </table>
@@ -569,6 +624,40 @@ export default function AdminPage() {
         </div>
 
         <div className="adm-section" style={{ marginTop: 16 }}>
+          <h2>إنشاء رابط وQR لفرع جديد</h2>
+          <div className="adm-hint">اكتب اسم الفرع، وحمّل الـ QR — أي عميل يمسحه يُسجَّل رده تلقائياً تحت هذا الفرع</div>
+          <div className="adm-qr-row">
+            <input
+              type="text"
+              placeholder="مثال: فرع جدة"
+              value={qrBranchName}
+              onChange={(e) => setQrBranchName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleGenerateQr(); }}
+            />
+            <button className="adm-btn adm-btn-primary" style={{ width: "auto" }} onClick={handleGenerateQr}>إنشاء</button>
+          </div>
+          {qrError && <div className="adm-err" style={{ marginTop: 10 }}>{qrError}</div>}
+          {qrLink && (
+            <div className="adm-qr-result">
+              <canvas ref={qrCanvasRef} />
+              <div className="adm-qr-info">
+                <div className="adm-qr-link">{qrLink}</div>
+                <div className="adm-qr-actions">
+                  <button className="adm-btn adm-btn-ghost" onClick={handleCopyQrLink}>نسخ الرابط</button>
+                  <button className="adm-btn adm-btn-ghost" onClick={handleDownloadQr}>تحميل QR (PNG)</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="adm-section" style={{ marginTop: 16 }}>
+          <h2>الردود حسب الفرع</h2>
+          <div className="adm-hint">كل فرع له رابط/QR خاص فيه — يُلتقط تلقائياً بدون سؤال العميل</div>
+          <div className="adm-chart-box"><canvas ref={branchRef} /></div>
+        </div>
+
+        <div className="adm-section" style={{ marginTop: 16 }}>
           <h2>آراء وملاحظات العملاء</h2>
           <div className="adm-hint">آخر التعليقات المكتوبة (الأسئلة الاختيارية)</div>
           <div className="adm-feedback-scroll">
@@ -602,6 +691,10 @@ export default function AdminPage() {
               <option value="">كل الجنس</option>
               {uniq(list.map((r) => r.gender)).map((v) => <option key={v} value={v}>{v}</option>)}
             </select>
+            <select value={branchF} onChange={(e) => setBranchF(e.target.value)}>
+              <option value="">كل الفروع</option>
+              {uniq(list.map((r) => r.branch)).map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
           </div>
           <div className="adm-table-scroll">
             <table>
@@ -610,12 +703,12 @@ export default function AdminPage() {
                   <th>#</th><th>التاريخ</th>
                   <th>q1</th><th>q2</th><th>q3</th><th>q4</th><th>q5</th>
                   <th>q6</th><th>q7</th><th>q8</th><th>q9</th><th>q10</th>
-                  <th>الدخل</th><th>العمر</th><th>الجنس</th><th>ملاحظات</th>
+                  <th>الدخل</th><th>العمر</th><th>الجنس</th><th>الفرع</th><th>ملاحظات</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredList.length === 0 && (
-                  <tr><td colSpan={16} className="adm-empty-note">لا توجد نتائج مطابقة</td></tr>
+                  <tr><td colSpan={17} className="adm-empty-note">لا توجد نتائج مطابقة</td></tr>
                 )}
                 {filteredList.map((r) => {
                   const date = r.created_at ? new Date(r.created_at).toLocaleString("ar-SA") : "";
@@ -628,7 +721,7 @@ export default function AdminPage() {
                           <span className="adm-score-pill" style={{ background: scoreColor(r[q]) + "22", color: scoreColor(r[q]) }}>{r[q]}</span>
                         </td>
                       ))}
-                      <td>{r.income}</td><td>{r.age_group}</td><td>{r.gender}</td>
+                      <td>{r.income}</td><td>{r.age_group}</td><td>{r.gender}</td><td>{r.branch}</td>
                       <td style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis" }}>{notes || "-"}</td>
                     </tr>
                   );
