@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { API_BASE, DISCOUNT_CODE } from "../lib/config.js";
+
+const STORAGE_KEY = "outfit_survey_responses";
 
 const pricingQs = [
   { id: "q1", n: "١", text: "أسعار منتجات Outfit مناسبة مقارنة بجودة المنتجات." },
@@ -76,6 +78,23 @@ function ChoiceQuestion({ name, opts, value, error, onChange }) {
   );
 }
 
+function AdminPanel({ open, count, onClose, onExport, onClear }) {
+  return (
+    <div className={"admin" + (open ? " show" : "")}>
+      <div className="admin-card">
+        <h3>لوحة النتائج</h3>
+        <div className="admin-count"><span>{count}</span><span>ردّ محفوظ على هذا الجهاز</span></div>
+        <div className="actions">
+          <button className="btn btn-primary" style={{ fontSize: 15, padding: 13 }} onClick={onExport}>تصدير كل الردود (Excel/CSV)</button>
+          <button className="btn btn-ghost" onClick={onClose}>إغلاق</button>
+          <button className="btn btn-danger" onClick={onClear}>مسح كل الردود المحفوظة</button>
+        </div>
+        <div className="admin-hint">تُحفظ الردود على هذا الجهاز فقط (مناسبة لجهاز في الفرع). اضغط شعار OUTFIT ٥ مرات لفتح هذه اللوحة.</div>
+      </div>
+    </div>
+  );
+}
+
 export default function SurveyPage() {
   const [page, setPage] = useState(1);
   const [answers, setAnswers] = useState({
@@ -88,6 +107,11 @@ export default function SurveyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [copyLabel, setCopyLabel] = useState("نسخ الكود");
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [respCount, setRespCount] = useState(0);
+
+  const logoClicks = useRef(0);
+  const clickTimer = useRef(null);
 
   useEffect(() => {
     if (localStorage.getItem(SUBMITTED_FLAG_KEY) === "1") setDone(true);
@@ -140,6 +164,29 @@ export default function SurveyPage() {
     if (!validatePage(3)) return;
 
     setSubmitting(true);
+
+    const val = (id) => answers[id];
+    const L = {
+      q1: pricingQs[0].text, q2: pricingQs[1].text, q3: pricingQs[2].text,
+      q4: positioningQs[0].text, q5: positioningQs[1].text, q6: positioningQs[2].text,
+      q7: positioningQs[3].text, q8: positioningQs[4].text, q9: positioningQs[5].text, q10: positioningQs[6].text,
+    };
+    const localRecord = {
+      timestamp: new Date().toISOString(),
+      "التسعير": { [L.q1]: val("q1"), [L.q2]: val("q2"), [L.q3]: val("q3") },
+      "التموضع": { [L.q4]: val("q4"), [L.q5]: val("q5"), [L.q6]: val("q6"), [L.q7]: val("q7"), [L.q8]: val("q8"), [L.q9]: val("q9"), [L.q10]: val("q10") },
+      "انطباع_عام": answers.feedback_general.trim(),
+      "ملاحظات": answers.feedback_notes.trim(),
+      "الدخل_الشهري": answers.income,
+      "الفئة_العمرية": answers.age,
+      "الجنس": answers.gender,
+    };
+    try {
+      const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      all.push(localRecord);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    } catch { /* noop */ }
+
     const payload = {
       device_token: getDeviceToken(),
       q1: answers.q1, q2: answers.q2, q3: answers.q3, q4: answers.q4, q5: answers.q5,
@@ -169,6 +216,50 @@ export default function SurveyPage() {
     setSubmitting(false);
     setDone(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function getAllLocal() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
+  }
+
+  function bumpLogo() {
+    logoClicks.current++;
+    clearTimeout(clickTimer.current);
+    clickTimer.current = setTimeout(() => { logoClicks.current = 0; }, 1200);
+    if (logoClicks.current >= 5) {
+      logoClicks.current = 0;
+      setRespCount(getAllLocal().length);
+      setAdminOpen(true);
+    }
+  }
+
+  function handleExportCSV() {
+    const all = getAllLocal();
+    if (!all.length) { alert("لا توجد ردود محفوظة بعد."); return; }
+    const headers = ["الوقت", "q1_سعر مناسب للجودة", "q2_السعر يمنعني", "q3_عادل مقابل المنافسين",
+      "q4_أميّزه بسهولة", "q5_أول ما يخطر", "q6_صورة مميزة", "q7_أعرف ما يميّزه", "q8_يناسب أشخاص مثلي", "q9_تصاميم تناسبني", "q10_أوصي به",
+      "انطباع عام", "ملاحظات", "الدخل الشهري", "الفئة العمرية", "الجنس"];
+    const rows = all.map((r) => {
+      const p = Object.values(r["التسعير"] || {});
+      const m = Object.values(r["التموضع"] || {});
+      const cells = [r.timestamp].concat(p, m, [r["انطباع_عام"], r["ملاحظات"], r["الدخل_الشهري"], r["الفئة_العمرية"], r["الجنس"]]);
+      return cells.map((c) => '"' + String(c == null ? "" : c).replace(/"/g, '""') + '"').join(",");
+    });
+    const csv = "\uFEFF" + headers.join(",") + "\n" + rows.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "ردود_استبيان_Outfit_" + new Date().toISOString().slice(0, 10) + ".csv";
+    a.click();
+  }
+
+  function handleClearLocal() {
+    if (confirm("متأكد من مسح كل الردود المحفوظة على هذا الجهاز؟ لا يمكن التراجع.")) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(SUBMITTED_FLAG_KEY);
+      localStorage.removeItem(DEVICE_TOKEN_KEY);
+      setRespCount(0);
+    }
   }
 
   function copyCode() {
@@ -238,6 +329,13 @@ export default function SurveyPage() {
             </button>
           </div>
         </div>
+        <AdminPanel
+          open={adminOpen}
+          count={respCount}
+          onClose={() => setAdminOpen(false)}
+          onExport={handleExportCSV}
+          onClear={handleClearLocal}
+        />
       </div>
     );
   }
@@ -246,7 +344,7 @@ export default function SurveyPage() {
     <div className="survey-page">
       <div className="wrap">
         <div className="hero">
-          <div className="brand-banner">
+          <div className="brand-banner" onClick={bumpLogo}>
             <img src="/logo.png" alt="OUTFIT أوت فيت" />
           </div>
           <span className="eyebrow">استبيان رأي العملاء</span>
@@ -365,6 +463,13 @@ export default function SurveyPage() {
 
         <footer>© {new Date().getFullYear()} OUTFIT · لاروش التجارية</footer>
       </div>
+      <AdminPanel
+        open={adminOpen}
+        count={respCount}
+        onClose={() => setAdminOpen(false)}
+        onExport={handleExportCSV}
+        onClear={handleClearLocal}
+      />
     </div>
   );
 }
