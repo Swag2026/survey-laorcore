@@ -53,8 +53,27 @@ function LogoutIcon() {
     </svg>
   );
 }
+function ClipboardIcon() {
+  return (
+    <svg {...iconProps} width={22} height={22}>
+      <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+    </svg>
+  );
+}
 
 export default function AdminPage() {
+  useEffect(() => {
+    const prevBg = document.body.style.backgroundColor;
+    const prevHtmlBg = document.documentElement.style.backgroundColor;
+    document.body.style.backgroundColor = "#09090b";
+    document.documentElement.style.backgroundColor = "#09090b";
+    return () => {
+      document.body.style.backgroundColor = prevBg;
+      document.documentElement.style.backgroundColor = prevHtmlBg;
+    };
+  }, []);
+
   const [adminKey, setAdminKey] = useState(sessionStorage.getItem("outfit_admin_key") || "");
   const [loggedIn, setLoggedIn] = useState(false);
   const [loginErr, setLoginErr] = useState(false);
@@ -306,7 +325,7 @@ export default function AdminPage() {
         <div className="adm-wrap">
           <div className="adm-login-card">
             <img src="/logo.png" alt="OUTFIT" className="adm-logo" />
-            <h1>تقرير استبيان</h1>
+            <h1><ClipboardIcon /> تقرير استبيان</h1>
             <label>كلمة المرور</label>
             <input
               type="password"
@@ -332,7 +351,7 @@ export default function AdminPage() {
           <div className="adm-brand">
             <img src="/logo.png" alt="OUTFIT" className="adm-logo" />
             <div>
-              <h1>تقرير استبيان</h1>
+              <h1><ClipboardIcon /> تقرير استبيان</h1>
               <div className="adm-sub">آخر تحديث: {updatedAt}</div>
             </div>
           </div>
