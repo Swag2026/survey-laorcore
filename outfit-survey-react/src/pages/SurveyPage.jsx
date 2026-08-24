@@ -22,7 +22,7 @@ const page2Qs = positioningQs.slice(2);
 
 const incomeOpts = ["أقل من 5,000 ريال", "5,000 - 9,999 ريال", "10,000 - 14,999 ريال", "15,000 - 19,999 ريال", "20,000 ريال أو أكثر", "أفضّل عدم الإجابة"];
 const ageOpts = ["أقل من 18 سنة", "18 - 24 سنة", "25 - 34 سنة", "35 - 44 سنة", "45 سنة أو أكثر"];
-const genderOpts = ["ذكر", "أنثى", "أفضّل عدم الإجابة"];
+const genderOpts = ["ذكر", "أنثى"];
 
 const arNum = (n) => "٠١٢٣٤٥٦٧٨٩"[n];
 const SUBMITTED_FLAG_KEY = "outfit_survey_submitted";
