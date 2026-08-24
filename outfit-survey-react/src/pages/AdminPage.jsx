@@ -20,7 +20,6 @@ function scoreColor(v) {
 }
 
 export default function AdminPage() {
-  const [apiBase, setApiBase] = useState(sessionStorage.getItem("outfit_admin_base") || API_BASE);
   const [adminKey, setAdminKey] = useState(sessionStorage.getItem("outfit_admin_key") || "");
   const [loggedIn, setLoggedIn] = useState(false);
   const [loginErr, setLoginErr] = useState(false);
@@ -46,7 +45,7 @@ export default function AdminPage() {
   const chartsRef = useRef({});
   const dashRef = useRef(null);
 
-  async function loadAll(base = apiBase, key = adminKey, d = days) {
+  async function loadAll(base = API_BASE, key = adminKey, d = days) {
     setLoading(true);
     const res1 = await fetch(base.replace(/\/$/, "") + "/api/survey/stats" + (d ? "?days=" + d : ""), { headers: { "X-Admin-Key": key } });
     if (!res1.ok) throw new Error("bad key or server");
@@ -61,11 +60,10 @@ export default function AdminPage() {
 
   async function handleLogin() {
     setLoginErr(false);
-    if (!apiBase.trim() || !adminKey.trim()) return;
-    sessionStorage.setItem("outfit_admin_base", apiBase);
+    if (!adminKey.trim()) return;
     sessionStorage.setItem("outfit_admin_key", adminKey);
     try {
-      await loadAll(apiBase, adminKey, days);
+      await loadAll(API_BASE, adminKey, days);
       setLoggedIn(true);
     } catch {
       setLoginErr(true);
@@ -75,21 +73,19 @@ export default function AdminPage() {
 
   function handleLogout() {
     sessionStorage.removeItem("outfit_admin_key");
-    sessionStorage.removeItem("outfit_admin_base");
     setLoggedIn(false);
   }
 
   useEffect(() => {
-    const base = sessionStorage.getItem("outfit_admin_base");
     const key = sessionStorage.getItem("outfit_admin_key");
-    if (base && key) {
-      loadAll(base, key, days).then(() => setLoggedIn(true)).catch(() => {});
+    if (key) {
+      loadAll(API_BASE, key, days).then(() => setLoggedIn(true)).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (loggedIn) loadAll(apiBase, adminKey, days).catch(() => {});
+    if (loggedIn) loadAll(API_BASE, adminKey, days).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [days]);
 
@@ -217,7 +213,7 @@ export default function AdminPage() {
   const uniq = (arr) => [...new Set(arr)].sort();
 
   async function handleExportCSV() {
-    const res = await fetch(apiBase.replace(/\/$/, "") + "/api/survey/export", { headers: { "X-Admin-Key": adminKey } });
+    const res = await fetch(API_BASE.replace(/\/$/, "") + "/api/survey/export", { headers: { "X-Admin-Key": adminKey } });
     if (!res.ok) { alert("تعذر التصدير"); return; }
     const blob = await res.blob();
     const a = document.createElement("a");
@@ -259,11 +255,15 @@ export default function AdminPage() {
         <div className="adm-wrap">
           <div className="adm-login-card">
             <h1>تقرير استبيان OUTFIT</h1>
-            <label>رابط الـ API</label>
-            <input value={apiBase} onChange={(e) => setApiBase(e.target.value)} placeholder="https://survey-api.swag.sa" />
-            <label>مفتاح الأدمن (ADMIN_KEY)</label>
-            <input type="password" value={adminKey} onChange={(e) => setAdminKey(e.target.value)} placeholder="ادخل المفتاح" />
-            {loginErr && <div className="adm-err">المفتاح غير صحيح أو تعذر الاتصال بالسيرفر.</div>}
+            <label>كلمة المرور</label>
+            <input
+              type="password"
+              value={adminKey}
+              onChange={(e) => setAdminKey(e.target.value)}
+              placeholder="ادخل كلمة المرور"
+              onKeyDown={(e) => { if (e.key === "Enter") handleLogin(); }}
+            />
+            {loginErr && <div className="adm-err">كلمة المرور غير صحيحة أو تعذر الاتصال بالسيرفر.</div>}
             <button className="adm-btn adm-btn-primary" onClick={handleLogin} disabled={loading}>
               {loading ? "جارٍ التحميل…" : "دخول"}
             </button>
